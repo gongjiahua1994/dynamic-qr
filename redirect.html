@@ -38,11 +38,13 @@
       font-size: 15px;
       line-height: 1.7;
       margin-bottom: 8px;
+      white-space: pre-line;
     }
     .detail {
       color: #999;
       font-size: 13px;
       margin-top: 16px;
+      white-space: pre-line;
     }
     .spinner {
       display: inline-block;
@@ -62,8 +64,8 @@
 <body>
   <div class="card">
     <div class="icon" id="icon">⏳</div>
-    <h1 id="title">正在验证二维码...</h1>
-    <p id="message">请稍候</p>
+    <h1 id="title">正在验证二维码... / Verifying QR code...</h1>
+    <p id="message">请稍候 / Please wait</p>
     <p class="detail" id="detail"></p>
   </div>
 
@@ -75,9 +77,10 @@
     // 签名密钥：必须与 index.html 中的 SECRET 完全一致
     const SECRET = 'a3f7b2c9d4e1f8a6b5c0d3e7f9a2b1c8d4e6f0a3b7c9d2e5f8a1c4b7d0e3f6a9';
 
-    // 有效时间窗口（秒）。二维码每 5 秒刷新，这里给 7 秒窗口，
-    // 留出扫码 + 网络加载的缓冲时间。超过则判定为过期。
-    const VALID_WINDOW = 7;
+    // 有效时间窗口（秒）。二维码每 5 秒刷新，这里给 10 秒窗口，
+    // 使得每个二维码在刷新后仍有 5 秒重叠有效期，避免网速慢导致
+    // 学生扫码后页面加载完成时已过期。
+    const VALID_WINDOW = 10;
     // ============================================================
 
     const iconEl = document.getElementById('icon');
@@ -169,18 +172,18 @@
       // 缺参数
       if (!tsStr || !sig) {
         iconEl.textContent = '❌';
-        titleEl.textContent = '二维码无效';
+        titleEl.textContent = '二维码无效 / Invalid QR code';
         titleEl.className = 'expired';
-        messageEl.textContent = '二维码参数不完整，请重新扫描老师投影上的最新二维码。';
+        messageEl.textContent = '二维码参数不完整，请重新扫描老师投影上的最新二维码。\nIncomplete QR code. Please scan the latest code on the projector.';
         return;
       }
 
       const ts = parseInt(tsStr, 10);
       if (isNaN(ts)) {
         iconEl.textContent = '❌';
-        titleEl.textContent = '二维码无效';
+        titleEl.textContent = '二维码无效 / Invalid QR code';
         titleEl.className = 'expired';
-        messageEl.textContent = '时间戳格式错误。';
+        messageEl.textContent = '时间戳格式错误。\nInvalid timestamp format.';
         return;
       }
 
@@ -189,10 +192,10 @@
         const valid = verify(ts, sig);
         if (!valid) {
           iconEl.textContent = '🚫';
-          titleEl.textContent = '二维码被篡改';
+          titleEl.textContent = '二维码被篡改 / QR code tampered';
           titleEl.className = 'expired';
-          messageEl.textContent = '签名校验失败，该二维码可能被修改过。请重新扫描最新二维码。';
-          detailEl.textContent = '如持续出现此问题，请联系老师。';
+          messageEl.textContent = '签名校验失败，该二维码可能被修改过。请重新扫描最新二维码。\nSignature verification failed. The QR code may have been altered. Please scan the latest code.';
+          detailEl.textContent = '如持续出现此问题，请联系老师。\nIf this persists, please contact your instructor.';
           return;
         }
 
@@ -201,37 +204,37 @@
         const elapsed = (now - ts) / 1000;
         if (elapsed > VALID_WINDOW) {
           iconEl.textContent = '⏰';
-          titleEl.textContent = '二维码已过期';
+          titleEl.textContent = '二维码已过期 / QR code expired';
           titleEl.className = 'expired';
-          messageEl.textContent = `该二维码生成于 ${Math.floor(elapsed)} 秒前，已超过有效期（${VALID_WINDOW} 秒）。`;
-          detailEl.textContent = '请让老师刷新后，重新扫描投影上最新的二维码。';
+          messageEl.textContent = `该二维码生成于 ${Math.floor(elapsed)} 秒前，已超过有效期（${VALID_WINDOW} 秒）。\nThis code was generated ${Math.floor(elapsed)} seconds ago and has expired (valid for ${VALID_WINDOW}s).`;
+          detailEl.textContent = '请让老师刷新后，重新扫描投影上最新的二维码。\nPlease ask your instructor to refresh, then scan the latest code.';
           return;
         }
 
         // 未来时间的二维码（时钟差异或伪造）
         if (elapsed < -5) {
           iconEl.textContent = '⚠️';
-          titleEl.textContent = '二维码时间异常';
+          titleEl.textContent = '二维码时间异常 / Time mismatch';
           titleEl.className = 'expired';
-          messageEl.textContent = '二维码时间与当前时间不符，请重新扫描。';
+          messageEl.textContent = '二维码时间与当前时间不符，请重新扫描。\nThe QR code timestamp does not match the current time. Please scan again.';
           return;
         }
 
         // 3. 验证通过，跳转到问卷星 Quiz
         iconEl.textContent = '✅';
-        titleEl.textContent = '验证通过';
+        titleEl.textContent = '验证通过 / Verified';
         titleEl.className = 'success';
-        messageEl.textContent = '正在跳转到 Quiz 页面...';
-        detailEl.textContent = `（剩余有效时间：${(VALID_WINDOW - elapsed).toFixed(1)} 秒）`;
+        messageEl.textContent = '正在跳转到 Quiz 页面... / Redirecting to Quiz...';
+        detailEl.textContent = `（剩余有效时间 / Time left: ${(VALID_WINDOW - elapsed).toFixed(1)} 秒 / s）`;
         // 短暂延迟让用户看到"验证通过"
         setTimeout(() => { window.location.href = QUIZ_URL; }, 600);
       } catch (e) {
         console.error(e);
         iconEl.textContent = '❌';
-        titleEl.textContent = '验证出错';
+        titleEl.textContent = '验证出错 / Verification error';
         titleEl.className = 'expired';
-        messageEl.textContent = '验证过程发生错误，请重新扫描。';
-        detailEl.textContent = '错误信息：' + e.message;
+        messageEl.textContent = '验证过程发生错误，请重新扫描。\nAn error occurred during verification. Please scan again.';
+        detailEl.textContent = '错误信息 / Error: ' + e.message;
       }
     }
 
